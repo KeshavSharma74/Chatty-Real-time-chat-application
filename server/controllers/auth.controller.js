@@ -31,7 +31,7 @@ const signup = async(req,res)=>{
             })
         }
         
-        const hashedPassword = await bcrypt(password,10);
+        const hashedPassword = await bcrypt.hash(password,10);
 
         const user = await User.create({
             fullName,
@@ -88,7 +88,7 @@ const login = async(req,res)=>{
             })
         }
 
-        const isCorrectPassword = bcrypt.compare(password,user.password);
+        const isCorrectPassword = await bcrypt.compare(password,user.password);
 
         if(!isCorrectPassword){
             return res.status(400).json({
@@ -101,7 +101,8 @@ const login = async(req,res)=>{
 
         return res.status(200).json({
             success:true,
-            message:"User Loggedin Successfully."
+            message:"User Loggedin Successfully.",
+            userData:user,
         })
 
     }
@@ -109,9 +110,36 @@ const login = async(req,res)=>{
         console.log("Error in login controller :",error);
         return res.status(500).json({
             success:false,
-            message:"Internal Server Error."
+            message:"Internal Server Error.",
         })
     }
 }
 
-export {signup,login}
+const logout = async(req,res)=>{
+
+    try{
+
+        res.clearCookie('jwt',{
+            httpOnly:true,
+            secure:true,
+        })
+
+        return res.status(200).json({
+            success:true,
+            message:"User Logged Out Successfully."
+        })
+
+    }
+    catch(error){
+        
+        console.log("Error in login controller :",error);
+        return res.status(500).json({
+            success:false,
+            message:"Internal Server Error.",
+        })
+
+    }
+
+}
+
+export {signup,login,logout}
