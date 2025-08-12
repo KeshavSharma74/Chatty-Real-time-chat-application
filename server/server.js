@@ -17,8 +17,8 @@ app.listen(port, ()=>{
     console.log(`Server is listening on port : ${port}`);
 } )
 
-app.use('/api/v1',authRoute);
-app.use('/api/v1',messageRoute);
+app.use('/api/auth',authRoute);
+app.use('/api/message',messageRoute);
 
 app.get('/', (req,res)=>{
     return res.send("Server is live");
