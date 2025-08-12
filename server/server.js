@@ -4,6 +4,7 @@ import connectDb from "./libs/db.js";
 import cookieParser from "cookie-parser";
 import cors from "cors"
 import authRoute from "./routes/auth.route.js";
+import messageRoute from "./routes/message.route.js";
 
 const app=express();
 const port = process.env.PORT || 4000;
@@ -17,6 +18,7 @@ app.listen(port, ()=>{
 } )
 
 app.use('/api/v1',authRoute);
+app.use('/api/v1',messageRoute);
 
 app.get('/', (req,res)=>{
     return res.send("Server is live");
