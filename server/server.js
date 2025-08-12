@@ -9,7 +9,8 @@ import messageRoute from "./routes/message.route.js";
 const app = express();
 const port = process.env.PORT || 4000;
 
-app.use(express.json());
+// app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // ✅ Allow all origins
 app.use(cors({

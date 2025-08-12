@@ -7,7 +7,7 @@ const authRoute = Router();
 authRoute.post('/signup',signup);
 authRoute.post('/login',login);
 authRoute.post('/logout',logout);
-authRoute.post('/update-profile',protectRoute,updateProfile);
+authRoute.put('/update-profile',protectRoute,updateProfile);
 authRoute.get('/check-auth',protectRoute,checkAuth);
 
 
