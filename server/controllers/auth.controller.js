@@ -14,6 +14,8 @@ const signup = async (req, res) => {
             });
         }
 
+        // console.log("password : ",password);
+        // console.log("password length : ",password.length);
         if (password.length < 6) {
             return res.status(400).json({
                 success: false,
