@@ -7,7 +7,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["https://chatty-real-time-chat-application-7.vercel.app"],
+    origin: ["*","https://chatty-real-time-chat-application-7.vercel.app"],
   },
 });
 

@@ -16,7 +16,7 @@ const port = process.env.PORT || 4000;
 app.use(express.json({ limit: "10mb" }));
 app.use(
   cors({
-    origin:"https://chatty-real-time-chat-application-7.vercel.app",
+    origin:"*"||"https://chatty-real-time-chat-application-7.vercel.app",
     credentials: true,
   })
 );

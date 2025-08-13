@@ -3,7 +3,8 @@ import { axiosInstance } from "../libs/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-const BASE_URL = "https://chatty-real-time-chat-application.vercel.app";
+// const BASE_URL = "https://chatty-real-time-chat-application.vercel.app";
+const BASE_URL = "http://localhost:3000";
 
 export const useAuthStore = create( (set,get)=> ({
     authUser:null,
@@ -60,7 +61,8 @@ export const useAuthStore = create( (set,get)=> ({
     }
   },
     login: async (data) => {
-        console.log("abhi backend ka url print kr deta hu :",BASE_URL);
+        console.log("abhi backend ka url print kr deta hu :",BASE_URL);4
+        // console.log("bhai exec")
         try {
             set({ isLoggingIn: true });
             const res = await axiosInstance.post("/api/auth/login", data);
