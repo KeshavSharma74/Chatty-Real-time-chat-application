@@ -3,7 +3,7 @@ import { axiosInstance } from "../libs/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:3000" : import.meta.env.BACKEND_URL;
+const BASE_URL = import.meta.env.BACKEND_URL;
 
 export const useAuthStore = create( (set,get)=> ({
     authUser:null,
@@ -60,7 +60,7 @@ export const useAuthStore = create( (set,get)=> ({
     }
   },
     login: async (data) => {
-    
+        console.log("abhi backend ka url print kr deta hu :",BASE_URL);
         try {
             set({ isLoggingIn: true });
             const res = await axiosInstance.post("/api/auth/login", data);
