@@ -20,7 +20,7 @@ const App = () => {
     checkAuth();
   },[checkAuth])
 
-  console.log(theme);
+  // console.log(theme);
 
   if(isCheckingAuth && !authUser){
     return (
