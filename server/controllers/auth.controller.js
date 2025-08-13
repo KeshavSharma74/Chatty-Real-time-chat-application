@@ -66,6 +66,9 @@ const signup = async (req, res) => {
 };
 
 const login = async (req, res) => {
+
+    console.log("mei to login function mei aa liya backend pe");
+
     const { email, password } = req.body;
 
     try {
