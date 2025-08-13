@@ -26,7 +26,7 @@ app.listen(port, () => {
 });
 
 app.use('/api/auth', authRoute);
-app.use('/api/message', messageRoute);
+app.use('/api/messages', messageRoute);
 
 app.get('/', (req, res) => {
     return res.send("Server is live");
