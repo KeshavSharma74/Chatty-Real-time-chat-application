@@ -67,7 +67,7 @@ const signup = async (req, res) => {
 
 const login = async (req, res) => {
 
-    console.log("mei to login function mei aa liya backend pe");
+    // console.log("mei to login function mei aa liya backend pe");
 
     const { email, password } = req.body;
 
@@ -109,7 +109,7 @@ const login = async (req, res) => {
         console.log("Error in login controller:", error);
         return res.status(500).json({
             success: false,
-            message: "Internal server error."
+            message: error.message
         });
     }
 };
