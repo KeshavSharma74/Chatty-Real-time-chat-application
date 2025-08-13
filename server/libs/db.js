@@ -5,7 +5,7 @@ let demochetan;
 const connectDb = async()=>{
     console.log("connect db ke andar chalna shuru kr rha hu jii")
     try{
-        const connectionInstance = await mongoose.connect(`${process.env.MONGODB_URL}/${process.env.DB_NAME}`);
+        const connectionInstance = await mongoose.connect(`${process.env.MONGODB_URL}`);
         demochetan=connectionInstance;
         for(let i=0;i<10;i++){
             console.log("Database Connected Successfully.");
