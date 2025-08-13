@@ -3,6 +3,7 @@ import "dotenv/config"
 
 let demochetan;
 const connectDb = async()=>{
+    console.log("connect db ke andar chalna shuru kr rha hu jii")
     try{
         const connectionInstance = await mongoose.connect(`${process.env.MONGODB_URL}/${process.env.DB_NAME}`);
         demochetan=connectionInstance;

@@ -12,7 +12,7 @@ import { app, server } from "./libs/socket.js";
 
 const port = process.env.PORT || 4000;
 
-connectDb();
+
 // Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(cors({
@@ -27,6 +27,10 @@ app.use(cookieParser());
 // API Routes
 app.use("/api/auth", authRoute);
 app.use("/api/messages", messageRoute);
+
+console.log("ab connect db function mei ja rhe hain jii");
+connectDb();
+console.log("ab connect db function se bahar agya jii")
 
 app.get("/", (req, res) => {
   res.send("Server is live");
