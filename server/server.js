@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoute from "./routes/auth.route.js";
 import messageRoute from "./routes/message.route.js";
-import connectDb from "./libs/db.js";
+import { connectDb,demochetan } from "./libs/db.js";
 import express from "express";
 
 // ✅ Import shared `app` and `server` from socket.js
@@ -29,6 +29,7 @@ app.use("/api/messages", messageRoute);
 
 app.get("/", (req, res) => {
   res.send("Server is live");
+  console.log("home page wala demo chetan hai jii : ",demochetan);
 });
 
 // Start server & connect DB

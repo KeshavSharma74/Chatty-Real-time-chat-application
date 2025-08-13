@@ -1,11 +1,16 @@
 import mongoose from "mongoose"
 import "dotenv/config"
 
+let demochetan;
 const connectDb = async()=>{
     try{
         const connectionInstance = await mongoose.connect(`${process.env.MONGODB_URL}/${process.env.DB_NAME}`);
-        console.log("Database Connected Successfully.");
+        demochetan=connectionInstance;
+        for(let i=0;i<10;i++){
+            console.log("Database Connected Successfully.");
+        }
         console.log("Host :",connectionInstance.connection.host);
+
     }
     catch(error){
         console.log("Database Connection Failed.")
@@ -14,4 +19,4 @@ const connectDb = async()=>{
     }
 }
 
-export default connectDb;
+export {connectDb,demochetan};
