@@ -15,7 +15,7 @@ export const useAuthStore = create( (set,get)=> ({
     socket: null,
     checkAuth: async() =>{
         try{
-            const res=await axiosInstance.get('/auth/check-auth');
+            const res=await axiosInstance.get('/api/auth/check-auth');
             if(res.data.success){
                 console.log(res.data.userData);
                 set({authUser:res.data.userData});
@@ -33,7 +33,7 @@ export const useAuthStore = create( (set,get)=> ({
       signup: async (data) => {   
         try {
             set({ isSigningUp: true });
-            const res = await axiosInstance.post("/auth/signup", data);
+            const res = await axiosInstance.post("/api/auth/signup", data);
             if(res.data.success){
                 set({ authUser: res.data.userData });
                 // console.log(res.data.userData);
@@ -48,7 +48,7 @@ export const useAuthStore = create( (set,get)=> ({
   },
   logout: async() =>{
     try{
-        const res= await axiosInstance.post('/auth/logout');
+        const res= await axiosInstance.post('/api/auth/logout');
         if(res.data.success){
             set({authUser:null});
             toast.success("Logged out successfully");
@@ -63,7 +63,7 @@ export const useAuthStore = create( (set,get)=> ({
     
         try {
             set({ isLoggingIn: true });
-            const res = await axiosInstance.post("/auth/login", data);
+            const res = await axiosInstance.post("/api/auth/login", data);
             if(res.data.success){
                 set({ authUser: res.data.userData});
                 // console.log("login function mei : ", res.data.userData);
@@ -82,7 +82,7 @@ export const useAuthStore = create( (set,get)=> ({
         
         try {
             set({ isUpdatingProfile: true });
-            const res = await axiosInstance.put("/auth/update-profile", data);
+            const res = await axiosInstance.put("/api/auth/update-profile", data);
             if(res.data.success){
                 set({ authUser: res.data.updatedUser });
                 toast.success("Profile updated successfully");
