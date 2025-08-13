@@ -12,6 +12,7 @@ import { app, server } from "./libs/socket.js";
 
 const port = process.env.PORT || 4000;
 
+connectDb();
 // Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(cors({
@@ -32,8 +33,9 @@ app.get("/", (req, res) => {
   console.log("home page wala demo chetan hai jii : ",demochetan);
 });
 
+
 // Start server & connect DB
 server.listen(port, () => {
   console.log(`✅ Server is running on port: ${port}`);
-  connectDb();
+  
 });
