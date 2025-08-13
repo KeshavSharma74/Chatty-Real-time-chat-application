@@ -78,7 +78,8 @@ export const useAuthStore = create( (set,get)=> ({
             }
 
         } catch (error) {
-            toast.error(error.response.data.message);
+            toast.error(error.message);
+            toast.error("login mei dikkat agyi")
         } finally {
             set({ isLoggingIn: false });
         }
