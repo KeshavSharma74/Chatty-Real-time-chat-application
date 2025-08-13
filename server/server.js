@@ -11,7 +11,6 @@ import express from "express"
 import { app, server } from "./libs/socket.js";
 
 const port = process.env.PORT || 4000;
-const __dirname = path.resolve();
 
 // Middleware
 app.use(express.json({ limit: "10mb" }));
@@ -26,6 +25,10 @@ app.use(cookieParser());
 // API Routes
 app.use("/api/auth", authRoute);
 app.use("/api/messages", messageRoute);
+
+app.get("/", (req, res) => {
+  res.send("Server is live");
+});
 
 
 // Start server & connect DB
