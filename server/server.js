@@ -12,27 +12,15 @@ import { app, server } from "./libs/socket.js";
 
 const port = process.env.PORT || 4000;
 
-// ✅ Allowed origins (dev + prod)
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://chatty-real-time-chat-application-7.vercel.app",
-];
-
 // Middleware
 app.use(express.json({ limit: "10mb" }));
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, etc.)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://chatty-real-time-chat-application-7.vercel.app"
+  ],
+  credentials: true
+}));
 app.use(cookieParser());
 
 // API Routes
