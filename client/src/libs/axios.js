@@ -1,6 +1,6 @@
 import axios from "axios";
 
 export const axiosInstance = axios.create({
-  baseURL:import.meta.env.BACKEND_URL,
+  baseURL:"https://chatty-real-time-chat-application.vercel.app",
   withCredentials: true,
 });

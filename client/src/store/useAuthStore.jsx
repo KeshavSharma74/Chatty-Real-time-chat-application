@@ -3,7 +3,7 @@ import { axiosInstance } from "../libs/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-const BASE_URL = import.meta.env.BACKEND_URL;
+const BASE_URL = "https://chatty-real-time-chat-application.vercel.app";
 
 export const useAuthStore = create( (set,get)=> ({
     authUser:null,
