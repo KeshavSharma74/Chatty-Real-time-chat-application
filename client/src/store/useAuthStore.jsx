@@ -64,7 +64,7 @@ export const useAuthStore = create( (set,get)=> ({
     }
   },
     login: async (data) => {
-        console.log("abhi backend ka url print kr deta hu :",BASE_URL);4
+        // console.log("abhi backend ka url print kr deta hu :",BASE_URL);
         // console.log("bhai exec")
         try {
             set({ isLoggingIn: true });
@@ -79,7 +79,7 @@ export const useAuthStore = create( (set,get)=> ({
 
         } catch (error) {
             toast.error(error.message);
-            toast.error("login mei dikkat agyi")
+            // toast.error("login mei dikkat agyi")
         } finally {
             set({ isLoggingIn: false });
         }

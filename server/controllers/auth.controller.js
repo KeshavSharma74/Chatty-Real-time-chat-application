@@ -2,7 +2,7 @@ import cloudinary from "../libs/cloudinary.js";
 import { generateToken } from "../libs/util.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
-import { demochetan } from "../libs/db.js";
+// import { demochetan } from "../libs/db.js";
 
 const signup = async (req, res) => {
     const { fullName, email, password } = req.body;
@@ -69,7 +69,7 @@ const signup = async (req, res) => {
 const login = async (req, res) => {
 
     // console.log("mei to login function mei aa liya backend pe");
-    console.log("login controller wala demo chetan hai jii : ",demochetan);
+    // console.log("login controller wala demo chetan hai jii : ",demochetan);
 
     const { email, password } = req.body;
 

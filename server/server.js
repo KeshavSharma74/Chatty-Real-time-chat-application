@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoute from "./routes/auth.route.js";
 import messageRoute from "./routes/message.route.js";
-import { connectDb,demochetan } from "./libs/db.js";
+import { connectDb} from "./libs/db.js";
 import express from "express";
 
 // ✅ Import shared `app` and `server` from socket.js
@@ -28,18 +28,18 @@ app.use(cookieParser());
 app.use("/api/auth", authRoute);
 app.use("/api/messages", messageRoute);
 
-console.log("ab connect db function mei ja rhe hain jii");
+// console.log("ab connect db function mei ja rhe hain jii");
 connectDb();
-console.log("ab connect db function se bahar agya jii")
+// console.log("ab connect db function se bahar agya jii")
 
 app.get("/", (req, res) => {
   res.send("Server is live");
-  console.log("home page wala demo chetan hai jii : ",demochetan);
+  // console.log("home page wala demo chetan hai jii : ",demochetan);
 });
 
 
 // Start server & connect DB
 server.listen(port, () => {
-  console.log(`✅ Server is running on port: ${port}`);
+  console.log(`Server is running on port: ${port}`);
   
 });

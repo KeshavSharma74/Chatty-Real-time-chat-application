@@ -1,15 +1,16 @@
 import mongoose from "mongoose"
 import "dotenv/config"
 
-let demochetan;
+// let demochetan;
 const connectDb = async()=>{
-    console.log("connect db ke andar chalna shuru kr rha hu jii")
+    // console.log("connect db ke andar chalna shuru kr rha hu jii")
     try{
         const connectionInstance = await mongoose.connect(`${process.env.MONGODB_URL}`);
-        demochetan=connectionInstance;
-        for(let i=0;i<10;i++){
-            console.log("Database Connected Successfully.");
-        }
+        // demochetan=connectionInstance;
+        // for(let i=0;i<10;i++){
+        //     console.log("Database Connected Successfully.");
+        // }
+        console.log("Database Connected Successfully.");
         console.log("Host :",connectionInstance.connection.host);
 
     }
@@ -20,4 +21,4 @@ const connectDb = async()=>{
     }
 }
 
-export {connectDb,demochetan};
+export {connectDb};
