@@ -9,9 +9,31 @@ import Navbar from './components/Navbar'
 import { useAuthStore } from './store/useAuthStore'
 import {Loader} from "lucide-react"
 import { useThemeStore } from './store/useThemeStore'
+import { useChatStore } from './store/useChatStore'
 
 const App = () => {
 
+  const initializeAudio = useChatStore((state) => state.initializeAudio);
+  
+  useEffect(() => {
+    // Initialize audio when app loads
+    initializeAudio();
+    
+    // Optional: Enable audio context on first user interaction
+    const enableAudio = () => {
+      initializeAudio();
+      document.removeEventListener('click', enableAudio);
+      document.removeEventListener('keydown', enableAudio);
+    };
+    
+    document.addEventListener('click', enableAudio);
+    document.addEventListener('keydown', enableAudio);
+    
+    return () => {
+      document.removeEventListener('click', enableAudio);
+      document.removeEventListener('keydown', enableAudio);
+    };
+  }, [initializeAudio]);
   
   const {authUser,checkAuth,isCheckingAuth} = useAuthStore();
   const {theme} = useThemeStore();

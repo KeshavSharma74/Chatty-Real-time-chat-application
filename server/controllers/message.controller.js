@@ -77,15 +77,50 @@ const sendMessages = async (req, res) => {
       image: imageUrl,
     });
 
+    // ✅ Get sender info with error handling
+    const sender = await User.findById(senderId).select("fullName profilePic email");
+    
+    if (!sender) {
+      console.warn("Sender not found for message:", senderId);
+      return res.status(400).json({
+        success: false,
+        message: "Sender not found.",
+      });
+    }
+
+    const messageForSocket = {
+      ...newMessage.toObject(),
+      senderName: sender.fullName || sender.email || "Unknown User",
+      senderProfilePic: sender.profilePic,
+      senderEmail: sender.email, // Additional fallback identifier
+    };
+
+    console.log("Sending message with sender info:", {
+      senderName: messageForSocket.senderName,
+      senderId: senderId,
+      receiverId: receiverId
+    });
+
+    // ✅ Send to receiver
     const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", newMessage);
+      io.to(receiverSocketId).emit("newMessage", messageForSocket);
+      console.log("Message sent to receiver:", receiverId);
+    } else {
+      console.log("Receiver not online:", receiverId);
+    }
+
+    // ✅ Send to sender too (so sender sees their own message instantly)
+    const senderSocketId = getReceiverSocketId(senderId);
+    if (senderSocketId && senderSocketId !== receiverSocketId) {
+      io.to(senderSocketId).emit("newMessage", messageForSocket);
+      console.log("Message sent to sender:", senderId);
     }
 
     return res.status(200).json({
       success: true,
       message: "Message Created Successfully.",
-      newMessage,
+      newMessage: messageForSocket,
     });
   } catch (error) {
     console.log("Error in sendMessages controller:", error);
@@ -95,5 +130,7 @@ const sendMessages = async (req, res) => {
     });
   }
 };
+
+
 
 export { getUsersFromSidebar, getMessages, sendMessages };
