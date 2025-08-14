@@ -2,6 +2,9 @@ import cloudinary from "../libs/cloudinary.js";
 import { generateToken } from "../libs/util.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
+import transporter from "../libs/nodemailer.js";
+import { WELCOME_EMAIL_TEMPLATE } from "../libs/emailTemplates.js";
+import "dotenv/config"
 // import { demochetan } from "../libs/db.js";
 
 const signup = async (req, res) => {
@@ -50,6 +53,13 @@ const signup = async (req, res) => {
         generateToken(user._id, res);
 
         const { password: _, ...safeUser } = user._doc;
+
+        await transporter.sendMail({
+            from: process.env.SENDER_MAIL,
+            to: email,
+            subject: "Welcome to Chatty",
+            html: WELCOME_EMAIL_TEMPLATE.replace("{{email}}", email).replace("{{name}}", fullName),
+        });
 
         return res.status(201).json({
             success: true,
@@ -187,7 +197,7 @@ const checkAuth = async (req, res) => {
         console.log("Error in checkAuth controller:", error);
         return res.status(500).json({
             success: false,
-            message: "Internal server error."
+            message: error.message
         });
     }
 };
