@@ -44,7 +44,7 @@ const ChatContainer = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-auto">
+    <div className="flex-1 flex flex-col overflow-hidden">
       <ChatHeader />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -54,7 +54,7 @@ const ChatContainer = () => {
             className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
             ref={messageEndRef}
           >
-            <div className=" chat-image avatar">
+            <div className="chat-image avatar">
               <div className="size-10 rounded-full border">
                 <img
                   src={
@@ -71,15 +71,19 @@ const ChatContainer = () => {
                 {formatMessageTime(message.createdAt)}
               </time>
             </div>
-            <div className="chat-bubble flex flex-col">
+            <div className="chat-bubble flex flex-col max-w-xs sm:max-w-md lg:max-w-lg xl:max-w-xl break-words overflow-wrap-anywhere">
               {message.image && (
                 <img
                   src={message.image}
                   alt="Attachment"
-                  className="sm:max-w-[200px] rounded-md mb-2"
+                  className="max-w-full sm:max-w-[200px] rounded-md mb-2 object-contain"
                 />
               )}
-              {message.text && <p>{message.text}</p>}
+              {message.text && (
+                <p className="whitespace-pre-wrap break-words overflow-wrap-anywhere">
+                  {message.text}
+                </p>
+              )}
             </div>
           </div>
         ))}
@@ -89,4 +93,5 @@ const ChatContainer = () => {
     </div>
   );
 };
+
 export default ChatContainer;
