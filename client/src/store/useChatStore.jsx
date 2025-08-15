@@ -3,18 +3,6 @@ import toast from "react-hot-toast";
 import { axiosInstance } from "../libs/axios";
 import { useAuthStore } from "./useAuthStore";
 
-// Helper function to get avatar URL
-const getAvatarUrl = (user) => {
-  if (user?.profilePic) {
-    return user.profilePic;
-  }
-  
-  // Generate avatar using UI Avatars with user's name
-  const userName = user?.fullName || user?.name || user?.email || 'User';
-  const encodedName = encodeURIComponent(userName);
-  return `https://ui-avatars.com/api/?name=${encodedName}&background=6366f1&color=ffffff&size=256&rounded=true&format=svg`;
-};
-
 export const useChatStore = create((set, get) => ({
   messages: [],
   users: [],
@@ -29,7 +17,7 @@ export const useChatStore = create((set, get) => ({
     try {
       const audio = new Audio("/notification.mp3");
       audio.preload = "auto";
-      audio.volume = 0.5;
+      audio.volume = 0.5; // Set volume to 50%
       set({ notificationAudio: audio });
     } catch (error) {
       console.warn("Could not initialize notification audio:", error);
@@ -43,9 +31,11 @@ export const useChatStore = create((set, get) => ({
     if (!soundEnabled || !notificationAudio) return;
     
     try {
+      // Reset audio to beginning in case it was played recently
       notificationAudio.currentTime = 0;
       notificationAudio.play().catch((error) => {
         console.warn("Could not play notification sound:", error);
+        // Fallback: try to create new audio instance
         try {
           const fallbackAudio = new Audio("/notification.mp3");
           fallbackAudio.volume = 0.5;
@@ -68,7 +58,7 @@ export const useChatStore = create((set, get) => ({
   setSoundVolume: (volume) => {
     const { notificationAudio } = get();
     if (notificationAudio) {
-      notificationAudio.volume = Math.max(0, Math.min(1, volume));
+      notificationAudio.volume = Math.max(0, Math.min(1, volume)); // Clamp between 0 and 1
     }
   },
 
@@ -77,12 +67,7 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get("/api/messages/users");
       if (res.data.success) {
-        // Backend now handles avatar URLs, but add fallback just in case
-        const usersWithAvatars = res.data.filteredUsers.map(user => ({
-          ...user,
-          profilePic: user.profilePic || getAvatarUrl(user)
-        }));
-        set({ users: usersWithAvatars });
+        set({ users: res.data.filteredUsers });
       }
     } catch (error) {
       toast.error(error.message);
@@ -95,7 +80,6 @@ export const useChatStore = create((set, get) => ({
     set({ isMessagesLoading: true });
     try {
       const res = await axiosInstance.get(`/api/messages/${userId}`);
-      // Backend now includes sender info with avatars for each message
       set({ messages: res.data.messages });
     } catch (error) {
       toast.error(error.message);
@@ -105,13 +89,15 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser, messages } = get();
+    const { selectedUser } = get();
     try {
-      const res = await axiosInstance.post(
+      await axiosInstance.post(
         `/api/messages/send/${selectedUser._id}`,
         messageData
       );
-      set({ messages: [...messages, res.data.newMessage] });
+      // Don't add the message here immediately - let the socket event handle it
+      // This prevents duplicate messages on sender's side
+      // set({ messages: [...messages, res.data.newMessage] });
     } catch (error) {
       toast.error(error.message);
     }
@@ -121,33 +107,57 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
 
     socket.on("newMessage", (newMessage) => {
-      console.log("Received new message:", newMessage);
+      console.log("Received new message:", newMessage); // Debug log
       const { selectedUser, messages, users, playNotificationSound } = get();
       const currentUserId = useAuthStore.getState().authUser?._id;
+
+      // If this is the sender's own message, just update the UI without notifications
+      if (newMessage.fromSelf || newMessage.senderId === currentUserId) {
+        if (selectedUser && newMessage.receiverId === selectedUser._id) {
+          set({ messages: [...messages, newMessage] });
+        }
+        return; // Don't show notifications for own messages
+      }
 
       // If message is from the currently opened chat
       if (selectedUser && newMessage.senderId === selectedUser._id) {
         set({ messages: [...messages, newMessage] });
-        if (newMessage.senderId !== currentUserId) {
-          playNotificationSound();
-        }
+        // Play notification sound for current chat
+        playNotificationSound();
       } 
-      // If message is from another user (not from self) - either no user selected or different user
-      else if ((newMessage.senderId !== currentUserId || selectedUser===null) && !newMessage.fromSelf ) {
-        // Get sender info - backend now provides this
-        let senderName = newMessage.senderName || "a user";
-        let senderProfilePic = newMessage.senderProfilePic;
-        let messageText = newMessage.text || "📷 Image";
+      // If message is from another user (not currently open chat) OR no user is selected
+      else {
+        // Get sender info from multiple sources
+        let senderName = "a user"; // default fallback
+        let senderProfilePic = "https://ui-avatars.com/api/?name=User&background=6366f1&color=ffffff&size=256&rounded=true&format=svg"; // default user icon
+        let messageText = newMessage.text || "📷 Image"; // fallback for image messages
         
-        // Fallback for profile pic if backend didn't provide it
-        if (!senderProfilePic) {
+        // First, try from the message itself
+        if (newMessage.senderName) {
+          senderName = newMessage.senderName;
+          // Create personalized avatar with user's initials
+          const initials = senderName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase();
+          senderProfilePic = newMessage.senderProfilePic || 
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=6366f1&color=ffffff&size=256&rounded=true&format=svg`;
+        } 
+        // If not available, try to find from users list
+        else if (newMessage.senderId) {
           const senderUser = users.find(user => user._id === newMessage.senderId);
-          senderProfilePic = senderUser ? getAvatarUrl(senderUser) : getAvatarUrl({ fullName: senderName });
+          if (senderUser) {
+            senderName = senderUser.fullName || senderUser.name || "a user";
+            const initials = senderName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase();
+            senderProfilePic = senderUser.profilePic || 
+              `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=6366f1&color=ffffff&size=256&rounded=true&format=svg`;
+          }
         }
 
-        console.log("Sender info resolved:", { senderName, senderProfilePic, messageText });
+        console.log("Sender info resolved:", { senderName, senderProfilePic, messageText, selectedUser }); // Debug log
 
-        // Show custom toast notification
+        // Show custom toast notification for messages when:
+        // 1. No user is selected (selectedUser is null)
+        // 2. Message is from a different user than the currently selected one
+        console.log("Showing notification - selectedUser:", selectedUser, "senderId:", newMessage.senderId);
+        
         toast.custom((t) => (
           <div
             className={`${
@@ -162,9 +172,8 @@ export const useChatStore = create((set, get) => ({
                     src={senderProfilePic}
                     alt={senderName}
                     onError={(e) => {
-                      // Fallback to UI Avatars if image fails to load
-                      const fallbackName = encodeURIComponent(senderName);
-                      e.target.src = `https://ui-avatars.com/api/?name=${fallbackName}&background=6366f1&color=ffffff&size=256&rounded=true&format=svg`;
+                      const initials = senderName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase();
+                      e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=6366f1&color=ffffff&size=256&rounded=true&format=svg`;
                     }}
                   />
                 </div>
@@ -188,28 +197,30 @@ export const useChatStore = create((set, get) => ({
             </div>
           </div>
         ), {
-          id: newMessage.senderId,
-          duration: 6000,
+          id: `${newMessage.senderId}-${Date.now()}`, // Use timestamp to allow multiple notifications from same sender
+          duration: 1300, // Show for 6 seconds
         });
 
         // Play notification sound
         playNotificationSound();
 
-        // Update document title if tab is hidden
+        // Update document title to show notification
         if (document.hidden) {
           const originalTitle = document.title;
-          document.title = `🔔 New Message from ${senderName} - ${originalTitle}`;
+          document.title = `🔔 New Message from ${senderName}`;
           
+          // Reset title when user focuses back on tab
           const resetTitle = () => {
-            document.title = originalTitle;
-            document.removeEventListener('visibilitychange', resetTitle);
+            if (!document.hidden) {
+              document.title = originalTitle;
+              document.removeEventListener('visibilitychange', resetTitle);
+            }
           };
           document.addEventListener('visibilitychange', resetTitle);
         }
-      }
-      // If message is from self, just add to messages if it's for the current chat
-      else if (newMessage.senderId === currentUserId && selectedUser && newMessage.receiverId === selectedUser._id) {
-        set({ messages: [...messages, newMessage] });
+
+        // If no user is selected, we might want to update the users list to show unread indicator
+        // This depends on your UI implementation
       }
     });
   },
