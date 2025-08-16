@@ -6,90 +6,83 @@ import { io } from "socket.io-client";
 const BASE_URL = "https://chatty-real-time-chat-application-4s51.onrender.com";
 // const BASE_URL = "http://localhost:3000";
 
-export const useAuthStore = create( (set,get)=> ({
-    authUser:null,
-    isSigningUp:false,
-    isLoggingIn:false,
-    isUpdatingProfile:false,
-    isCheckingAuth:true,
-    onlineUsers:[],
+export const useAuthStore = create((set, get) => ({
+    authUser: null,
+    isSigningUp: false,
+    isLoggingIn: false,
+    isUpdatingProfile: false,
+    isCheckingAuth: true,
+    onlineUsers: [],
     socket: null,
-    checkAuth: async() =>{
-        try{
-            const res=await axiosInstance.get('/api/auth/check-auth');
-            if(res.data.success){
+
+    checkAuth: async () => {
+        try {
+            const res = await axiosInstance.get('/api/auth/check-auth');
+            if (res.data.success) {
                 console.log(res.data.userData);
-                set({authUser:res.data.userData});
+                set({ authUser: res.data.userData });
                 get().connectSocket();
-            }
-            else{
+            } else {
                 toast.error(res.data.error);
             }
-        }
-        catch(error){
-            console.log("Error in checkAuth :",error);
-            set({authUser:null});
-        }
-        finally{
-            set({isCheckingAuth:false});
+        } catch (error) {
+            console.log("Error in checkAuth :", error);
+            set({ authUser: null });
+        } finally {
+            set({ isCheckingAuth: false });
         }
     },
-      signup: async (data) => {   
+
+    signup: async (data) => {
         try {
             set({ isSigningUp: true });
             const res = await axiosInstance.post("/api/auth/signup", data);
-            if(res.data.success){
+            if (res.data.success) {
                 set({ authUser: res.data.userData });
-                // console.log(res.data.userData);
                 toast.success("Account created successfully");
                 get().connectSocket();
             }
         } catch (error) {
             toast.error(error.response.data.message);
         } finally {
-      set({ isSigningUp: false });
-    }
-  },
-  logout: async() =>{
-    try{
-        const res= await axiosInstance.post('/api/auth/logout');
-        if(res.data.success){
-            set({authUser:null});
-            toast.success("Logged out successfully");
-            get().disconnectSocket();
+            set({ isSigningUp: false });
         }
-    }
-    catch(error){
-        toast.error(error.message);
-    }
-  },
+    },
+
+    logout: async () => {
+        try {
+            const res = await axiosInstance.post('/api/auth/logout');
+            if (res.data.success) {
+                set({ authUser: null });
+                toast.success("Logged out successfully");
+                get().disconnectSocket();
+            }
+        } catch (error) {
+            toast.error(error.message);
+        }
+    },
+
     login: async (data) => {
-        // console.log("abhi backend ka url print kr deta hu :",BASE_URL);
-        // console.log("bhai exec")
         try {
             set({ isLoggingIn: true });
             const res = await axiosInstance.post("/api/auth/login", data);
-            if(res.data.success){
-                set({ authUser: res.data.userData});
-                // console.log("login function mei : ", res.data.userData);
-                get.connectSocket();
+            if (res.data.success) {
+                set({ authUser: res.data.userData });
                 toast.success("Logged in successfully");
                 get().connectSocket();
             }
-
         } catch (error) {
             toast.error(error.message);
-            // toast.error("login mei dikkat agyi")
         } finally {
             set({ isLoggingIn: false });
         }
-  },
+    },
+
     updateProfile: async (data) => {
-        
         try {
             set({ isUpdatingProfile: true });
             const res = await axiosInstance.put("/api/auth/update-profile", data);
-            if(res.data.success){
+            if (res.data.success) {
                 set({ authUser: res.data.updatedUser });
                 toast.success("Profile updated successfully");
             }
@@ -99,25 +92,36 @@ export const useAuthStore = create( (set,get)=> ({
         } finally {
             set({ isUpdatingProfile: false });
         }
-  },
-  connectSocket: () => {
-    const { authUser } = get();
-    if (!authUser || get().socket?.connected) return;
+    },
 
-    const socket = io(BASE_URL, {
-      query: {
-        userId: authUser._id,
-      },
-    });
-    socket.connect();
+    connectSocket: () => {
+        const { authUser } = get();
+        if (!authUser || get().socket?.connected) return;
 
-    set({ socket: socket });
+        const socket = io(BASE_URL, {
+            query: {
+                userId: authUser._id,
+            },
+        });
+        socket.connect();
 
-    socket.on("getOnlineUsers", (userIds) => {
-      set({ onlineUsers: userIds });
-    });
-  },
-  disconnectSocket: () => {
-    if (get().socket?.connected) get().socket.disconnect();
-  },
-}) )
+        set({ socket: socket });
+
+        socket.on("getOnlineUsers", (userIds) => {
+            set({ onlineUsers: userIds });
+        });
+
+        // Listen for messages marked as seen to update unread counts
+        socket.on("messagesMarkedAsSeen", ({ chatUserId, userId }) => {
+            // This event will be handled by the chat store to update unread counts
+            console.log("Messages marked as seen:", { chatUserId, userId });
+        });
+    },
+
+    disconnectSocket: () => {
+        if (get().socket?.connected) {
+            get().socket.disconnect();
+            set({ socket: null });
+        }
+    },
+}));

@@ -21,6 +21,9 @@ const Sidebar = () => {
     return matchesOnline && matchesSearch;
   });
 
+  // Calculate total unread messages
+  const totalUnreadMessages = users.reduce((total, user) => total + (user.unreadCount || 0), 0);
+
   if (isUsersLoading) return <SidebarSkeleton />;
 
   return (
@@ -30,6 +33,11 @@ const Sidebar = () => {
         <div className="flex items-center gap-2">
           <Users className="size-6" />
           <span className="font-medium hidden lg:block">Contacts</span>
+          {totalUnreadMessages > 0 && (
+            <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center hidden lg:block">
+              {totalUnreadMessages}
+            </span>
+          )}
         </div>
 
         {/* Online filter */}
@@ -48,7 +56,6 @@ const Sidebar = () => {
 
         {/* Search bar */}
         <div className="mt-3 relative hidden lg:block">
-          
           <input
             type="text"
             placeholder="Search contacts..."
@@ -66,14 +73,14 @@ const Sidebar = () => {
           <button
             key={user._id}
             onClick={() => setSelectedUser(user)}
-            className={`w-full p-3 flex items-center gap-3 hover:bg-base-300 transition-colors ${
+            className={`w-full p-3 flex items-center gap-3 hover:bg-base-300 transition-colors relative ${
               selectedUser?._id === user._id ? "bg-base-300 ring-1 ring-base-300" : ""
             }`}
           >
             <div className="relative mx-auto lg:mx-0">
               <img
                 src={user.profilePic || "/avatar.png"}
-                alt={user.name}
+                alt={user.fullName}
                 className="size-12 object-cover rounded-full"
               />
               {onlineUsers.includes(user._id) && (
@@ -81,12 +88,19 @@ const Sidebar = () => {
               )}
             </div>
 
-            <div className="hidden lg:block text-left min-w-0">
+            <div className="hidden lg:block text-left min-w-0 flex-1">
               <div className="font-medium truncate">{user.fullName}</div>
               <div className="text-sm text-zinc-400">
                 {onlineUsers.includes(user._id) ? "Online" : "Offline"}
               </div>
             </div>
+
+            {/* Unread message count badge */}
+            {user.unreadCount > 0 && (
+              <div className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center lg:relative absolute top-1 right-1">
+                {user.unreadCount > 99 ? '99+' : user.unreadCount}
+              </div>
+            )}
           </button>
         ))}
 

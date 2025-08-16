@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import toast from "react-hot-toast";
 import { axiosInstance } from "../libs/axios";
+import toast from "react-hot-toast";
 import { useAuthStore } from "./useAuthStore";
 
 export const useChatStore = create((set, get) => ({
@@ -17,7 +17,7 @@ export const useChatStore = create((set, get) => ({
     try {
       const audio = new Audio("/notification.mp3");
       audio.preload = "auto";
-      audio.volume = 0.5; // Set volume to 50%
+      audio.volume = 0.5;
       set({ notificationAudio: audio });
     } catch (error) {
       console.warn("Could not initialize notification audio:", error);
@@ -31,11 +31,9 @@ export const useChatStore = create((set, get) => ({
     if (!soundEnabled || !notificationAudio) return;
     
     try {
-      // Reset audio to beginning in case it was played recently
       notificationAudio.currentTime = 0;
       notificationAudio.play().catch((error) => {
         console.warn("Could not play notification sound:", error);
-        // Fallback: try to create new audio instance
         try {
           const fallbackAudio = new Audio("/notification.mp3");
           fallbackAudio.volume = 0.5;
@@ -58,7 +56,7 @@ export const useChatStore = create((set, get) => ({
   setSoundVolume: (volume) => {
     const { notificationAudio } = get();
     if (notificationAudio) {
-      notificationAudio.volume = Math.max(0, Math.min(1, volume)); // Clamp between 0 and 1
+      notificationAudio.volume = Math.max(0, Math.min(1, volume));
     }
   },
 
@@ -81,6 +79,13 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get(`/api/messages/${userId}`);
       set({ messages: res.data.messages });
+      
+      // After fetching messages, update the unread count for this user to 0
+      const { users } = get();
+      const updatedUsers = users.map(user => 
+        user._id === userId ? { ...user, unreadCount: 0 } : user
+      );
+      set({ users: updatedUsers });
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -95,20 +100,58 @@ export const useChatStore = create((set, get) => ({
         `/api/messages/send/${selectedUser._id}`,
         messageData
       );
-      // Don't add the message here immediately - let the socket event handle it
-      // This prevents duplicate messages on sender's side
-      // set({ messages: [...messages, res.data.newMessage] });
     } catch (error) {
       toast.error(error.message);
     }
+  },
+
+  // Mark messages as seen
+  markMessagesAsSeen: async (userId) => {
+    try {
+      await axiosInstance.put(`/api/messages/mark-seen/${userId}`);
+      
+      // Update local state
+      const { users } = get();
+      const updatedUsers = users.map(user => 
+        user._id === userId ? { ...user, unreadCount: 0 } : user
+      );
+      set({ users: updatedUsers });
+    } catch (error) {
+      console.error("Error marking messages as seen:", error);
+    }
+  },
+
+  // Update unread count for a specific user
+  updateUnreadCount: (userId, increment = true) => {
+    const { users } = get();
+    const updatedUsers = users.map(user => {
+      if (user._id === userId) {
+        const currentCount = user.unreadCount || 0;
+        return { 
+          ...user, 
+          unreadCount: increment ? currentCount + 1 : Math.max(0, currentCount - 1)
+        };
+      }
+      return user;
+    });
+    set({ users: updatedUsers });
+  },
+
+  // Reset unread count for a specific user
+  resetUnreadCount: (userId) => {
+    const { users } = get();
+    const updatedUsers = users.map(user => 
+      user._id === userId ? { ...user, unreadCount: 0 } : user
+    );
+    set({ users: updatedUsers });
   },
 
   subscribeToMessages: () => {
     const socket = useAuthStore.getState().socket;
 
     socket.on("newMessage", (newMessage) => {
-      console.log("Received new message:", newMessage); // Debug log
-      const { selectedUser, messages, users, playNotificationSound } = get();
+      console.log("Received new message:", newMessage);
+      const { selectedUser, messages, users, playNotificationSound, updateUnreadCount } = get();
       const currentUserId = useAuthStore.getState().authUser?._id;
 
       // If this is the sender's own message, just update the UI without notifications
@@ -116,32 +159,35 @@ export const useChatStore = create((set, get) => ({
         if (selectedUser && newMessage.receiverId === selectedUser._id) {
           set({ messages: [...messages, newMessage] });
         }
-        return; // Don't show notifications for own messages
+        return;
       }
 
-      // If message is from the currently opened chat
+      // If message is from the currently opened chat (selectedUser is not null and matches sender)
       if (selectedUser && newMessage.senderId === selectedUser._id) {
         set({ messages: [...messages, newMessage] });
-        // Play notification sound for current chat
         playNotificationSound();
-      } 
-      // If message is from another user (not currently open chat) OR no user is selected
-      else {
-        // Get sender info from multiple sources
-        let senderName = "a user"; // default fallback
-        let senderProfilePic = "https://ui-avatars.com/api/?name=User&background=6366f1&color=ffffff&size=256&rounded=true&format=svg"; // default user icon
-        let messageText = newMessage.text || "📷 Image"; // fallback for image messages
         
-        // First, try from the message itself
+        // Mark the message as seen since the chat is open
+        get().markMessagesAsSeen(newMessage.senderId);
+      } 
+      // If no user is selected (selectedUser is null) OR message is from a different user
+      else {
+        console.log("Message from different user or no user selected:", { selectedUser, senderId: newMessage.senderId });
+        
+        // Update unread count for this user - THIS IS CRUCIAL FOR BOTH CASES
+        updateUnreadCount(newMessage.senderId, true);
+
+        // Get sender info for notification
+        let senderName = "a user";
+        let senderProfilePic = "https://ui-avatars.com/api/?name=User&background=6366f1&color=ffffff&size=256&rounded=true&format=svg";
+        let messageText = newMessage.text || "📷 Image";
+        
         if (newMessage.senderName) {
           senderName = newMessage.senderName;
-          // Create personalized avatar with user's initials
           const initials = senderName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase();
           senderProfilePic = newMessage.senderProfilePic || 
             `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=6366f1&color=ffffff&size=256&rounded=true&format=svg`;
-        } 
-        // If not available, try to find from users list
-        else if (newMessage.senderId) {
+        } else if (newMessage.senderId) {
           const senderUser = users.find(user => user._id === newMessage.senderId);
           if (senderUser) {
             senderName = senderUser.fullName || senderUser.name || "a user";
@@ -151,13 +197,11 @@ export const useChatStore = create((set, get) => ({
           }
         }
 
-        console.log("Sender info resolved:", { senderName, senderProfilePic, messageText, selectedUser }); // Debug log
+        console.log("Showing notification for:", { senderName, selectedUser: selectedUser?.fullName || 'null' });
 
-        // Show custom toast notification for messages when:
-        // 1. No user is selected (selectedUser is null)
-        // 2. Message is from a different user than the currently selected one
-        console.log("Showing notification - selectedUser:", selectedUser, "senderId:", newMessage.senderId);
-        
+        // Show toast notification for ANY message when:
+        // 1. No user is selected (selectedUser is null) - MAIN FIX HERE
+        // 2. Message is from a different user than currently selected
         toast.custom((t) => (
           <div
             className={`${
@@ -197,11 +241,10 @@ export const useChatStore = create((set, get) => ({
             </div>
           </div>
         ), {
-          id: `${newMessage.senderId}-${Date.now()}`, // Use timestamp to allow multiple notifications from same sender
-          duration: 1300, // Show for 6 seconds
+          id: `${newMessage.senderId}-${Date.now()}`,
+          duration: 1300,
         });
 
-        // Play notification sound
         playNotificationSound();
 
         // Update document title to show notification
@@ -209,7 +252,6 @@ export const useChatStore = create((set, get) => ({
           const originalTitle = document.title;
           document.title = `🔔 New Message from ${senderName}`;
           
-          // Reset title when user focuses back on tab
           const resetTitle = () => {
             if (!document.hidden) {
               document.title = originalTitle;
@@ -218,9 +260,16 @@ export const useChatStore = create((set, get) => ({
           };
           document.addEventListener('visibilitychange', resetTitle);
         }
+      }
+    });
 
-        // If no user is selected, we might want to update the users list to show unread indicator
-        // This depends on your UI implementation
+    // Listen for messages marked as seen event
+    socket.on("messagesMarkedAsSeen", ({ chatUserId, userId }) => {
+      const currentUserId = useAuthStore.getState().authUser?._id;
+      
+      // Only update if this event is relevant to current user
+      if (userId === currentUserId) {
+        get().resetUnreadCount(chatUserId);
       }
     });
   },
@@ -229,8 +278,16 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (socket) {
       socket.off("newMessage");
+      socket.off("messagesMarkedAsSeen");
     }
   },
 
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setSelectedUser: (selectedUser) => {
+    set({ selectedUser });
+    
+    // When a user is selected, mark their messages as seen
+    if (selectedUser) {
+      get().markMessagesAsSeen(selectedUser._id);
+    }
+  },
 }));

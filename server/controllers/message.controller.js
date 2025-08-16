@@ -1,26 +1,15 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
-import cloudinary from "../libs/cloudinary.js"; // make sure this is configured
-import { getReceiverSocketId ,io} from "../libs/socket.js";
+import cloudinary from "../libs/cloudinary.js";
+import { getReceiverSocketId, io } from "../libs/socket.js";
 
 // Helper function to get profile picture URL
 const getProfilePicUrl = (user, req) => {
   if (user.profilePic) {
-    // If user has a profile picture, return it
     return user.profilePic;
   }
   
-  // Generate avatar URL using the same logic as your sidebar
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
   const userName = user.fullName || user.email || 'User';
-  
-  // You can either use a local avatar from public folder
-  // or generate one using UI Avatars with user's name
-  
-  // Option 1: Use local default avatar from public folder
-  // return `${baseUrl}/avatar.png`; // Make sure you have avatar.png in public folder
-  
-  // Option 2: Generate avatar using UI Avatars API (recommended)
   const encodedName = encodeURIComponent(userName);
   return `https://ui-avatars.com/api/?name=${encodedName}&background=6366f1&color=ffffff&size=256&rounded=true&format=svg`;
 };
@@ -32,16 +21,27 @@ const getUsersFromSidebar = async (req, res) => {
     const users = await User.find({ _id: { $ne: loggedInUserId } })
       .select("fullName email profilePic");
 
-    // Add avatar URLs to each user
-    const filteredUsers = users.map(user => ({
-      ...user.toObject(),
-      profilePic: getProfilePicUrl(user, req)
-    }));
+    // Get unread message counts for each user
+    const usersWithUnreadCount = await Promise.all(
+      users.map(async (user) => {
+        const unreadCount = await Message.countDocuments({
+          senderId: user._id,
+          receiverId: loggedInUserId,
+          seen: false
+        });
+
+        return {
+          ...user.toObject(),
+          profilePic: getProfilePicUrl(user, req),
+          unreadCount
+        };
+      })
+    );
 
     return res.status(200).json({
       success: true,
       message: "Sidebar Users Fetched Successfully.",
-      filteredUsers,
+      filteredUsers: usersWithUnreadCount,
     });
   } catch (error) {
     console.log("Error in getUsersForSidebar controller:", error);
@@ -64,6 +64,12 @@ const getMessages = async (req, res) => {
       ],
     }).sort({ createdAt: 1 });
 
+    // Mark messages from the other user as seen
+    await Message.updateMany(
+      { senderId: userToChatId, receiverId: myId, seen: false },
+      { seen: true }
+    );
+
     // Populate sender info for each message
     const messagesWithSenderInfo = await Promise.all(
       messages.map(async (message) => {
@@ -76,6 +82,15 @@ const getMessages = async (req, res) => {
         };
       })
     );
+
+    // Emit event to update unread counts for all connected users
+    const senderSocketId = getReceiverSocketId(myId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messagesMarkedAsSeen", { 
+        chatUserId: userToChatId,
+        userId: myId 
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -115,6 +130,7 @@ const sendMessages = async (req, res) => {
       receiverId,
       text,
       image: imageUrl,
+      seen: false // Explicitly set as unseen
     });
 
     // Get sender info with error handling
@@ -128,7 +144,6 @@ const sendMessages = async (req, res) => {
       });
     }
 
-    // Use the helper function to get the correct profile pic URL
     const senderProfilePic = getProfilePicUrl(sender, req);
 
     const messageForSocket = {
@@ -145,7 +160,7 @@ const sendMessages = async (req, res) => {
       receiverId: receiverId
     });
 
-    // Send to receiver (this will trigger toast notification)
+    // Send to receiver (this will trigger toast notification and update unread count)
     const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", messageForSocket);
@@ -179,4 +194,37 @@ const sendMessages = async (req, res) => {
   }
 };
 
-export { getUsersFromSidebar, getMessages, sendMessages };
+// New function to mark specific messages as seen
+const markMessagesAsSeen = async (req, res) => {
+  try {
+    const { id: senderId } = req.params;
+    const receiverId = req.user._id;
+
+    await Message.updateMany(
+      { senderId, receiverId, seen: false },
+      { seen: true }
+    );
+
+    // Emit event to update unread counts
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messagesMarkedAsSeen", { 
+        chatUserId: senderId,
+        userId: receiverId 
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Messages marked as seen successfully.",
+    });
+  } catch (error) {
+    console.log("Error in markMessagesAsSeen controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+export { getUsersFromSidebar, getMessages, sendMessages, markMessagesAsSeen };
